@@ -5,8 +5,6 @@ from fastapi.staticfiles import StaticFiles
 from app.config import get_settings
 from app.api import auth, monitor, analysis, reports
 from app.api import payments
-from app.database import sync_engine
-from app.models import Base
 import os
 
 settings = get_settings()
@@ -15,10 +13,16 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create all tables on startup
-    Base.metadata.create_all(bind=sync_engine)
+    try:
+        from app.database import sync_engine
+        from app.models import Base
+        Base.metadata.create_all(bind=sync_engine)
+        print("Database tables created")
+    except Exception as e:
+        print(f"Warning: Could not create tables: {e}")
+        print("App will continue without auto-creating tables")
     # Create reports directory
     os.makedirs("reports", exist_ok=True)
-    print("Database tables created")
     print(f"RedditPulse API is running!")
     yield
 
