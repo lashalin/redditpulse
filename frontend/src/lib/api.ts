@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://redditpulse-api-production-5deb.up.railway.app/api';
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
