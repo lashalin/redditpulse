@@ -341,13 +341,13 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                     <p>
                       时间范围:{' '}
                       {
-                        {
+                        ({
                           '1m': '过去1个月',
                           '3m': '过去3个月',
                           '6m': '过去6个月',
                           '1y': '过去1年',
                           all: '全部时间',
-                        }[monitor.time_range] || monitor.time_range
+                        } as Record<string, string>)[monitor.time_range] || monitor.time_range
                       }
                     </p>
                     <p>
