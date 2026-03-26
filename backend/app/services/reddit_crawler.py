@@ -55,36 +55,55 @@ class RedditCrawler:
         """Check if a post is relevant to the brand keyword.
 
         Returns dict with relevance score and match info.
+        Handles variations: "open claw" matches "openclaw", "OpenClaw", "open-claw", etc.
         """
-        kw_lower = keyword.lower()
+        kw_lower = keyword.lower().strip()
         title_lower = title.lower()
-        body_lower = body.lower()[:2000]  # Only check first 2000 chars of body
+        body_lower = body.lower()[:2000]
 
-        # Build word boundary pattern for the keyword
-        # This prevents matching "banker" when searching for "anker"
+        # Build multiple patterns to catch variations
+        # 1. Exact phrase with word boundaries: "open claw"
         kw_pattern = re.compile(r'\b' + re.escape(kw_lower) + r'\b', re.IGNORECASE)
+        # 2. Concatenated version: "openclaw"
+        kw_no_space = kw_lower.replace(" ", "").replace("-", "")
+        kw_concat_pattern = re.compile(r'\b' + re.escape(kw_no_space) + r'\b', re.IGNORECASE)
+        # 3. Hyphenated/flexible spacing: "open-claw", "open_claw"
+        kw_flex = kw_lower.replace(" ", r'[\s\-_]*')
+        kw_flex_pattern = re.compile(kw_flex, re.IGNORECASE)
 
-        title_match = bool(kw_pattern.search(title))
-        body_match = bool(kw_pattern.search(body_lower))
+        full_text = f"{title_lower} {body_lower}"
+
+        # Check all patterns
+        title_match = bool(
+            kw_pattern.search(title_lower) or
+            kw_concat_pattern.search(title_lower) or
+            kw_flex_pattern.search(title_lower)
+        )
+        body_match = bool(
+            kw_pattern.search(body_lower) or
+            kw_concat_pattern.search(body_lower) or
+            kw_flex_pattern.search(body_lower)
+        )
 
         score = 0
         if title_match:
-            score += 10  # Strong signal: keyword in title
+            score += 10
         if body_match:
-            score += 5   # Medium signal: keyword in body
+            score += 5
 
-        # Check for brand context clues (product, company, brand mentions)
+        # Check for brand context clues
         context_words = [
             "brand", "product", "review", "recommend", "bought", "purchase",
             "quality", "warranty", "customer", "support", "charger", "cable",
             "device", "accessory", "price", "deal", "sale", "discount",
             "alternative", "competitor", "vs", "versus", "compared",
-            "experience", "opinion", "thoughts", "worth",
+            "experience", "opinion", "thoughts", "worth", "app", "tool",
+            "software", "platform", "service", "feature", "update", "version",
+            "install", "download", "use", "using", "user", "ai", "model",
         ]
-        full_text = f"{title_lower} {body_lower}"
         context_hits = sum(1 for w in context_words if w in full_text)
         if context_hits >= 2:
-            score += 3  # Some commercial/brand context
+            score += 3
 
         return {
             "score": score,
@@ -106,10 +125,16 @@ class RedditCrawler:
         all_raw_posts = []
 
         # Strategy: Multiple search passes for better coverage
+        kw_no_space = keyword.replace(" ", "")
         search_queries = [
-            f'"{keyword}"',           # Exact phrase match (most precise)
+            f'"{keyword}"',           # Exact phrase match: "open claw"
             f'title:"{keyword}"',     # Must be in title
+            keyword,                  # Broad search (words anywhere)
         ]
+        # If keyword has spaces, also search concatenated version
+        if " " in keyword and kw_no_space.lower() != keyword.lower():
+            search_queries.insert(0, f'"{kw_no_space}"')   # "openclaw"
+            search_queries.insert(1, f'title:"{kw_no_space}"')
 
         for query in search_queries:
             after = None
