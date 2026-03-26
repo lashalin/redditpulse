@@ -12,12 +12,10 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create all tables on startup
+    # Create all tables on startup using async engine
     try:
-        from app.database import sync_engine
-        from app.models import Base
-        Base.metadata.create_all(bind=sync_engine)
-        print("Database tables created")
+        from app.database import create_tables
+        await create_tables()
     except Exception as e:
         print(f"Warning: Could not create tables: {e}")
         print("App will continue without auto-creating tables")

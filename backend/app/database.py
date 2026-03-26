@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
 from app.config import get_settings
 
@@ -34,6 +34,14 @@ if is_sqlite:
         cursor.execute("PRAGMA journal_mode=WAL")
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
+
+
+async def create_tables():
+    """Create all tables using async engine."""
+    from app.models import Base
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    print("Database tables created successfully (async)")
 
 
 async def get_db() -> AsyncSession:
